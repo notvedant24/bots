@@ -1,188 +1,57 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { ChatMessage } from "@/components/ui/chat-message";
-import { ChatInput } from "@/components/ui/chat-input";
-import { FeedbackDialog } from "@/components/ui/feedback-dialog";
-import { RatingDialog } from "@/components/ui/rating-dialog";
-import { aiService } from "@/services/aiService";
-import { conversationStore, Message } from "@/store/conversationStore";
+import React from "react";
 
-export default function Chat() {
-  const location = useLocation();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
-  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
-    null,
-  );
+interface ChatMessageProps {
+  message: string;
+  isUser: boolean;
+  timestamp: string;
+  showActions?: boolean;
+  onFeedback?: (feedback: "positive" | "negative") => void;
+}
 
-  useEffect(() => {
-    // Load existing conversation or create new one
-    let currentConversation = conversationStore.getCurrentConversation();
-    if (!currentConversation) {
-      currentConversation = conversationStore.createNewConversation();
-    }
-
-    setMessages(currentConversation.messages);
-
-    // Handle initial message from navigation
-    const initialMessage = location.state?.initialMessage;
-    if (initialMessage && currentConversation.messages.length === 0) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        message: initialMessage,
-        isUser: true,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-
-      conversationStore.addMessage(userMessage);
-      setMessages([userMessage]);
-
-      // Generate AI response
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          message: aiService.findResponse(initialMessage),
-          isUser: false,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        };
-        conversationStore.addMessage(aiResponse);
-        setMessages((prev) => [...prev, aiResponse]);
-      }, 1000);
-    }
-  }, [location.state]);
-
-  const handleSendMessage = (message: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      message,
-      isUser: true,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    conversationStore.addMessage(newMessage);
-    setMessages((prev) => [...prev, newMessage]);
-
-    // Generate AI response using the service
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        message: aiService.findResponse(message),
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      conversationStore.addMessage(aiResponse);
-      setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
-  };
-
-  const handleFeedback = (
-    messageId: string,
-    feedback: "positive" | "negative",
-  ) => {
-    if (feedback === "negative") {
-      // Show feedback dialog for negative feedback
-      setSelectedMessageId(messageId);
-      setFeedbackDialogOpen(true);
-    } else {
-      // Directly save positive feedback
-      conversationStore.updateMessageFeedback(messageId, feedback);
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === messageId ? { ...msg, feedback } : msg)),
-      );
-    }
-  };
-
-  const handleSaveConversation = () => {
-    // Show rating dialog when conversation is saved/ended
-    setRatingDialogOpen(true);
-  };
-
-  const handleFeedbackSubmit = (feedback: string) => {
-    if (selectedMessageId) {
-      // Store the negative feedback with additional details
-      const current = conversationStore.getCurrentConversation();
-      if (current) {
-        const message = current.messages.find(
-          (m) => m.id === selectedMessageId,
-        );
-        if (message) {
-          message.feedback = "negative";
-          message.feedbackDetails = feedback;
-          conversationStore.saveConversation(current);
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === selectedMessageId
-                ? {
-                    ...msg,
-                    feedback: "negative" as const,
-                    feedbackDetails: feedback,
-                  }
-                : msg,
-            ),
-          );
-        }
-      }
-      setSelectedMessageId(null);
-    }
-  };
-
-  const handleRatingSubmit = (rating: number, subjectiveFeedback?: string) => {
-    conversationStore.endConversation(rating, subjectiveFeedback);
-    alert(`Thank you for your feedback! Rating: ${rating}/5`);
-  };
-
+export function ChatMessage({
+  message,
+  isUser,
+  timestamp,
+  showActions,
+  onFeedback,
+}: ChatMessageProps) {
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <header className="p-4 border-b border-border bg-card">
-        <h1 className="text-xl font-ubuntu font-medium">Bot AI</h1>
-      </header>
+    <div
+      className={`flex items-start gap-2 my-2 ${
+        isUser ? "justify-end" : "justify-start"
+      }`}
+    >
+      <div
+        className={`rounded-lg px-3 py-2 max-w-[70%] ${
+          isUser ? "bg-blue-500 text-white" : "bg-gray-200 text-black"
+        }`}
+      >
+        {/* ✅ Always wrap text in <p> so Cypress finds it */}
+        <p className="whitespace-pre-line">{message}</p>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto">
-          {messages.map((msg) => (
-            <ChatMessage
-              key={msg.id}
-              message={msg.message}
-              isUser={msg.isUser}
-              timestamp={msg.timestamp}
-              showActions={!msg.isUser}
-              onFeedback={(feedback) => handleFeedback(msg.id, feedback)}
-            />
-          ))}
-        </div>
+        {/* timestamp */}
+        <span className="block text-xs text-gray-500 mt-1">{timestamp}</span>
+
+        {/* feedback buttons (only for bot messages) */}
+        {showActions && (
+          <div className="flex gap-2 mt-1">
+            <button
+              type="button"
+              className="text-green-600 hover:underline text-sm"
+              onClick={() => onFeedback?.("positive")}
+            >
+              👍
+            </button>
+            <button
+              type="button"
+              className="text-red-600 hover:underline text-sm"
+              onClick={() => onFeedback?.("negative")}
+            >
+              👎
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* Input */}
-      <ChatInput onSend={handleSendMessage} onSave={handleSaveConversation} />
-
-      {/* Feedback Dialog */}
-      <FeedbackDialog
-        open={feedbackDialogOpen}
-        onOpenChange={setFeedbackDialogOpen}
-        onSubmit={handleFeedbackSubmit}
-      />
-
-      {/* Rating Dialog */}
-      <RatingDialog
-        open={ratingDialogOpen}
-        onOpenChange={setRatingDialogOpen}
-        onSubmitRating={handleRatingSubmit}
-      />
     </div>
   );
 }
