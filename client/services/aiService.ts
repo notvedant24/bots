@@ -1,5 +1,5 @@
-import { sampleData, QAItem } from "../data/sampleData";
-
+import { sampleData } from "../data/sampleData";
+import type { QAItem } from "../data/sampleData";
 class AIService {
   private data: QAItem[] = sampleData;
 
