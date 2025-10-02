@@ -7,14 +7,14 @@ class AIService {
   findResponse(userMessage: string): string {
     const normalizedInput = userMessage.toLowerCase().trim();
 
-    // 1️⃣ Exact match
+    // 1️⃣ Exact match first
     const exactMatch = this.data.find(
       (item) => item.question.toLowerCase() === normalizedInput
     );
     if (exactMatch) return exactMatch.response;
 
-    // 2️⃣ Partial match with stricter scoring
-    const words = normalizedInput.split(" ").filter((word) => word.length > 2);
+    // 2️⃣ Partial match: only exact word matches count
+    const words = normalizedInput.split(" ").filter((w) => w.length > 2);
     let bestMatch: QAItem | null = null;
     let maxScore = 0;
 
@@ -28,16 +28,16 @@ class AIService {
         }
       }
 
-      if (score > maxScore && score > 0) {
+      if (score > maxScore) {
         maxScore = score;
         bestMatch = item;
       }
     }
 
-    // Only return a partial match if it has at least 2 matching keywords
+    // Only accept partial match if at least 2 exact words match
     if (bestMatch && maxScore >= 2) return bestMatch.response;
 
-    // 3️⃣ Default response
+    // 3️⃣ Default response for completely unknown questions
     return "Sorry, Did not understand your query!";
   }
 
