@@ -1,19 +1,19 @@
-import { sampleData, QAItem } from "../data/sampleData";
+import { sampleData } from "../data/sampleData";
+import type { QAItem } from "../data/sampleData";
 
 class AIService {
   private data: QAItem[] = sampleData;
 
   findResponse(userMessage: string): string {
-    // Simple matching algorithm - find best match based on keywords
     const normalizedInput = userMessage.toLowerCase().trim();
 
-    // First try exact match
+    // 1️⃣ Exact match
     const exactMatch = this.data.find(
-      (item) => item.question.toLowerCase() === normalizedInput,
+      (item) => item.question.toLowerCase() === normalizedInput
     );
     if (exactMatch) return exactMatch.response;
 
-    // Then try partial matches based on keywords
+    // 2️⃣ Partial match with stricter scoring
     const words = normalizedInput.split(" ").filter((word) => word.length > 2);
     let bestMatch: QAItem | null = null;
     let maxScore = 0;
@@ -23,11 +23,7 @@ class AIService {
       let score = 0;
 
       for (const word of words) {
-        if (
-          questionWords.some(
-            (qWord) => qWord.includes(word) || word.includes(qWord),
-          )
-        ) {
+        if (questionWords.includes(word)) {
           score++;
         }
       }
@@ -38,23 +34,19 @@ class AIService {
       }
     }
 
-    if (bestMatch) return bestMatch.response;
+    // Only return a partial match if it has at least 2 matching keywords
+    if (bestMatch && maxScore >= 2) return bestMatch.response;
 
-    // Default response if no match found
+    // 3️⃣ Default response
     return "Sorry, Did not understand your query!";
   }
 
   getRandomSuggestions(count: number = 4): QAItem[] {
-    // Get some specific suggestions that match the design
     const suggestions = [
-      this.data.find((item) => item.question.includes("weather")) ||
-        this.data[51],
-      this.data.find((item) => item.question.includes("location")) ||
-        this.data[52],
-      this.data.find((item) => item.question.includes("temperature")) ||
-        this.data[53],
-      this.data.find((item) => item.question.includes("how are you")) ||
-        this.data[50],
+      this.data.find((item) => item.question.includes("weather")) || this.data[51],
+      this.data.find((item) => item.question.includes("location")) || this.data[52],
+      this.data.find((item) => item.question.includes("temperature")) || this.data[53],
+      this.data.find((item) => item.question.includes("how are you")) || this.data[50],
     ].filter(Boolean) as QAItem[];
 
     return suggestions.slice(0, count);
