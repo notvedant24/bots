@@ -4,16 +4,15 @@ class AIService {
   private data: QAItem[] = sampleData;
 
   findResponse(userMessage: string): string {
-    // Simple matching algorithm - find best match based on keywords
     const normalizedInput = userMessage.toLowerCase().trim();
 
-    // First try exact match
+    // 1. Try exact match
     const exactMatch = this.data.find(
-      (item) => item.question.toLowerCase() === normalizedInput,
+      (item) => item.question.toLowerCase() === normalizedInput
     );
     if (exactMatch) return exactMatch.response;
 
-    // Then try partial matches based on keywords
+    // 2. Keyword-based partial match (stricter: only exact word matches)
     const words = normalizedInput.split(" ").filter((word) => word.length > 2);
     let bestMatch: QAItem | null = null;
     let maxScore = 0;
@@ -23,11 +22,7 @@ class AIService {
       let score = 0;
 
       for (const word of words) {
-        if (
-          questionWords.some(
-            (qWord) => qWord.includes(word) || word.includes(qWord),
-          )
-        ) {
+        if (questionWords.includes(word)) {
           score++;
         }
       }
@@ -40,12 +35,11 @@ class AIService {
 
     if (bestMatch) return bestMatch.response;
 
-    // Default response if no match found
+    // 3. Default response if no match found
     return "Sorry, Did not understand your query!";
   }
 
   getRandomSuggestions(count: number = 4): QAItem[] {
-    // Get some specific suggestions that match the design
     const suggestions = [
       this.data.find((item) => item.question.includes("weather")) ||
         this.data[51],
