@@ -12,12 +12,10 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
-    null,
-  );
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load existing conversation or create new one
+    // Load or create conversation
     let currentConversation = conversationStore.getCurrentConversation();
     if (!currentConversation) {
       currentConversation = conversationStore.createNewConversation();
@@ -45,7 +43,9 @@ export default function Chat() {
       setTimeout(() => {
         const aiResponse: Message = {
           id: (Date.now() + 1).toString(),
-          message: aiService.findResponse(initialMessage),
+          message:
+            aiService.findResponse(initialMessage) ||
+            "Sorry, Did not understand your query!",
           isUser: false,
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
@@ -72,11 +72,13 @@ export default function Chat() {
     conversationStore.addMessage(newMessage);
     setMessages((prev) => [...prev, newMessage]);
 
-    // Generate AI response using the service
+    // Generate AI response
     setTimeout(() => {
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        message: aiService.findResponse(message),
+        message:
+          aiService.findResponse(message) ||
+          "Sorry, Did not understand your query!",
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
@@ -88,16 +90,11 @@ export default function Chat() {
     }, 1000);
   };
 
-  const handleFeedback = (
-    messageId: string,
-    feedback: "positive" | "negative",
-  ) => {
+  const handleFeedback = (messageId: string, feedback: "positive" | "negative") => {
     if (feedback === "negative") {
-      // Show feedback dialog for negative feedback
       setSelectedMessageId(messageId);
       setFeedbackDialogOpen(true);
     } else {
-      // Directly save positive feedback
       conversationStore.updateMessageFeedback(messageId, feedback);
       setMessages((prev) =>
         prev.map((msg) => (msg.id === messageId ? { ...msg, feedback } : msg)),
@@ -106,18 +103,14 @@ export default function Chat() {
   };
 
   const handleSaveConversation = () => {
-    // Show rating dialog when conversation is saved/ended
     setRatingDialogOpen(true);
   };
 
   const handleFeedbackSubmit = (feedback: string) => {
     if (selectedMessageId) {
-      // Store the negative feedback with additional details
       const current = conversationStore.getCurrentConversation();
       if (current) {
-        const message = current.messages.find(
-          (m) => m.id === selectedMessageId,
-        );
+        const message = current.messages.find((m) => m.id === selectedMessageId);
         if (message) {
           message.feedback = "negative";
           message.feedbackDetails = feedback;
