@@ -6,37 +6,55 @@ class AIService {
   findResponse(userMessage: string): string {
     const normalizedInput = userMessage.toLowerCase().trim();
 
-    // Try exact match first
+    // Exact match
     const exactMatch = this.data.find(
       (item) => item.question.toLowerCase() === normalizedInput
     );
     if (exactMatch) return exactMatch.response;
 
-    // Remove common filler words
-    const stopWords = ["what", "is", "the", "a", "an", "of", "in", "to", "for", "and"];
+    // Remove filler words
+    const stopWords = [
+      "what",
+      "is",
+      "the",
+      "a",
+      "an",
+      "of",
+      "in",
+      "to",
+      "for",
+      "and",
+      "on",
+      "at",
+      "by",
+      "from",
+      "about",
+      "with",
+      "as",
+      "it",
+      "this",
+      "that",
+    ];
+
     const words = normalizedInput
-      .split(" ")
-      .filter((word) => word.length > 2 && !stopWords.includes(word));
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !stopWords.includes(w));
 
     let bestMatch: QAItem | null = null;
     let maxScore = 0;
 
-    // Find partial matches with stricter conditions
     for (const item of this.data) {
-      const questionWords = item.question.toLowerCase().split(" ");
+      const questionWords = item.question.toLowerCase().split(/\s+/);
       let score = 0;
 
       for (const word of words) {
-        if (
-          questionWords.some(
-            (qWord) => qWord.includes(word) || word.includes(qWord)
-          )
-        ) {
+        // Count match only for full keyword overlap, not substring
+        if (questionWords.includes(word)) {
           score++;
         }
       }
 
-      // Require at least 2 keyword matches to count as a valid response
+      // Require at least 2 strong matches to count
       if (score > maxScore && score >= 2) {
         maxScore = score;
         bestMatch = item;
@@ -45,16 +63,16 @@ class AIService {
 
     if (bestMatch) return bestMatch.response;
 
-    // Default fallback message
+    // ✅ Strict fallback
     return "Sorry, Did not understand your query!";
   }
 
   getRandomSuggestions(count: number = 4): QAItem[] {
     const suggestions = [
-      this.data.find((item) => item.question.includes("weather")) || this.data[51],
-      this.data.find((item) => item.question.includes("location")) || this.data[52],
-      this.data.find((item) => item.question.includes("temperature")) || this.data[53],
-      this.data.find((item) => item.question.includes("how are you")) || this.data[50],
+      this.data.find((item) => item.question.includes("weather")) || this.data[0],
+      this.data.find((item) => item.question.includes("location")) || this.data[1],
+      this.data.find((item) => item.question.includes("temperature")) || this.data[2],
+      this.data.find((item) => item.question.includes("how are you")) || this.data[3],
     ].filter(Boolean) as QAItem[];
 
     return suggestions.slice(0, count);
